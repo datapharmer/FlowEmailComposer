@@ -46,6 +46,7 @@ export default class flowEmailComposer extends LightningElement {
     @api folderHelpText;
     @api templateLabel;
     @api templateHelpText;
+    @api saveAsDraft = false;
 
     // Properties with @track annotation for tracking changes
     @track showSpinner = false;
@@ -204,15 +205,10 @@ export default class flowEmailComposer extends LightningElement {
 
                 // Check if templateId has a value and call changeBody if it does
                 if (this.emailTemplateId) {
-                    //console.log("initial email template is " + this.emailTemplateId);
                     this.selTemplateId = this.emailTemplateId;
-                    //console.log("calling changeBody with " + this.selTemplateId);
                     this.changeBody(this.selTemplateId);
-
                 }
             })
-
-
             .catch((error) => {
                 console.error('Error fetching email templates:', error);
                 this.showSpinner = false;
@@ -239,10 +235,8 @@ export default class flowEmailComposer extends LightningElement {
         this.changeBody(this.selTemplateId);
     }
 
-
     // Change the email body based on the selected template
     changeBody(selTemplateId) {
-        //console.log('changeBody called with value:', selTemplateId);
         this.showSpinner = true;
         this.selTemplateId = selTemplateId;
 
@@ -258,7 +252,6 @@ export default class flowEmailComposer extends LightningElement {
                 this.emailBody = cleanBody;
                 this._bodyDisplay = cleanBody;
                 this.attachmentsFromTemplate = result.fileAttachments;
-                //console.log("Attachments are " + JSON.stringify(this.attachmentsFromTemplate));
 
                 // Initialize arrays to store document and attachment IDs
                 let docIdsFromAttachment = [];
@@ -277,12 +270,9 @@ export default class flowEmailComposer extends LightningElement {
                     this.docIds = docIdsFromAttachment;
                     this.attachmentIds = attachmentIdsFromAttachment;
                 } else {
-                    //console.log('No attachments found or attachmentsFromTemplate is undefined');
                     this.docIds = [];
                     this.attachmentIds = [];
                 }
-                //console.log("docIds from Template are " + docIdsFromAttachment);
-                //console.log("attachmentIds from Template are " + attachmentIdsFromAttachment);
                 this.showSpinner = false;
             })
             .catch((error) => {
@@ -291,7 +281,7 @@ export default class flowEmailComposer extends LightningElement {
                 this.showSpinner = false;
                 Toast.show({
                     label: 'Error',
-                    message: error.body.message,
+                    message: error.body ? error.body.message : error.message,
                     mode: 'dismissable',
                     variant: 'error',
                 }, this);
@@ -301,17 +291,13 @@ export default class flowEmailComposer extends LightningElement {
     // Handle file uploads for both file attachments and content documents
     handleUpload_lightningFile(event) {
         let files = event.detail.files;
-        //console.log("Files are " + JSON.stringify(files));
         this.handleUploadFinished(files);
     }
 
-
     handleUploadFinished(files) {
-        //console.log("handleUploadFinished called with files: " + JSON.stringify(files));
         let objFiles = [];
         let documentIds = this.docIds;
         files.forEach(file => {
-
             let objFile = {
                 name: file.name,
                 documentId: file.documentId,
@@ -321,13 +307,8 @@ export default class flowEmailComposer extends LightningElement {
             documentIds.push(file.documentId);
             this.docIds = documentIds;
             this.uploadedFiles = objFiles;
-        })
-        //console.log("docIds is " + docIds);
-        //console.log("objFiles is " + JSON.stringify(objFiles));
-        //console.log("uploadedFiles is " + JSON.stringify(this.uploadedFiles));
-
+        });
     }
-
 
     _fireFlowEvent(eventName, data) {
         this.dispatchEvent(new FlowAttributeChangeEvent(eventName, data));
@@ -352,11 +333,19 @@ export default class flowEmailComposer extends LightningElement {
         );
     }
 
-    // Send an email using the sendAnEmailMsg Apex method
+    // Action handler for "Send Email" button
     sendEmailFromButton() {
+        this.executeEmailAction(false);
+    }
+
+    // Action handler for "Save Draft" button
+    saveDraftFromButton() {
+        this.executeEmailAction(true);
+    }
+
+    // Generic execution logic for sending or saving drafts
+    executeEmailAction(isDraft) {
         this.showSpinner = true;
-        //console.log("docIds being sent +" + this.docIds);
-        //console.log("attachmentIds being sent +" + this.attachmentIds);
 
         sendAnEmailMsg({
             fromAddress: this.fromAddress,
@@ -371,24 +360,27 @@ export default class flowEmailComposer extends LightningElement {
             contentDocumentIds: this.docIds,
             attachmentIds: this.attachmentIds,
             createActivity: this.logEmail,
+            saveAsDraft: isDraft
         })
             .then(() => {
+                const messageText = isDraft ? 'Email Draft Saved' : 'Email Sent';
                 Toast.show({
                     label: 'Success',
-                    message: 'Email Sent',
+                    message: messageText,
                     mode: 'dismissable',
                     variant: 'success'
                 }, this);
                 this.resetForm();
-                if(this.transitionOnSend) {
+                if (this.transitionOnSend) {
                     this.handleNavigation();
                 }                
             })
             .catch((error) => {
-                console.error('Error sending email:', error);
+                const actionName = isDraft ? 'saving email draft' : 'sending email';
+                console.error(`Error ${actionName}:`, error);
                 Toast.show({
                     label: 'Error',
-                    message: error.body.message,
+                    message: error.body ? error.body.message : error.message,
                     mode: 'dismissable',
                     variant: 'error',
                 }, this);
@@ -396,8 +388,6 @@ export default class flowEmailComposer extends LightningElement {
             .finally(() => {
                 this.showSpinner = false;
             });
-            
-            
     }
 
     // Reset the form fields
@@ -432,7 +422,7 @@ export default class flowEmailComposer extends LightningElement {
         this._fireFlowEvent('emailBody', value);
     }
 
-    // navigate to the next screen or (if last element) terminate the flow    
+    // Navigate to the next screen or terminate the flow
     handleNavigation() {    
         if (this.availableActions.find(action => action === 'NEXT')) {
             const navigateNextEvent = new FlowNavigationNextEvent();
@@ -441,7 +431,5 @@ export default class flowEmailComposer extends LightningElement {
             const navigateFinishEvent = new FlowNavigationFinishEvent();
             this.dispatchEvent(navigateFinishEvent);
         }
-    
-}
-
+    }
 }
