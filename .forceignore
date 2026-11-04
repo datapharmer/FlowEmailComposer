@@ -1,0 +1,31 @@
+# --- Default Scratch Org Configurations ---
+config/
+README.md
+
+# --- Profiles & Permission Sets ---
+# Uncomment if you manage these manually or do not want them overwritten by GitHub pushes
+# **/profiles/
+# **/permissionsets/
+
+# --- Local IDE & System Noise ---
+**/.sf/
+**/.sfdx/
+**/.local/
+**/System/
+.env
+
+# --- LWC Testing & Linting Overheads ---
+**/lwc/jsconfig.json
+**/lwc/tsconfig.json
+**/package-lock.json
+**/yarn.lock
+node_modules/
+coverage/
+
+# --- Salesforce Built-in Menu Overlaps ---
+# Often causes deployment blocks on different orgs
+*menus/
+
+# --- OS Artifacts ---
+**/.DS_Store
+**/Thumbs.db
