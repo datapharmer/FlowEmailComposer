@@ -120,14 +120,17 @@
                 </lightning-layout-item>
             </template>
 
-            <!-- Action Buttons -->
-            <lightning-layout-item size="12" class="slds-var-p-around_small slds-text-align_center">
-                <lightning-button disabled={isSendDisabled} label="Save Draft" onclick={saveDraftFromButton} variant="neutral" class="slds-var-m-right_x-small">
+        <!-- Action Buttons (Conditional Swap) -->
+        <lightning-layout-item size="12" class="slds-var-p-around_small slds-text-align_center">
+            <template lwc:if={saveAsDraft}>
+                <lightning-button disabled={isSendDisabled} label="Save Draft" onclick={saveDraftFromButton} variant="brand">
                 </lightning-button>
+            </template>
+            <template lwc:else>
                 <lightning-button disabled={isSendDisabled} label="Send" onclick={sendEmailFromButton} variant="brand">
                 </lightning-button>
-            </lightning-layout-item>
-        </lightning-layout>
+            </template>
+        </lightning-layout-item>
     </div>
 
     <template lwc:if={showSpinner}>
