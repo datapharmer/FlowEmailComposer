@@ -1,6 +1,6 @@
 # --- Default Scratch Org Configurations ---
 config/
-README.md
+*.md
 
 # --- Profiles & Permission Sets ---
 # Uncomment if you manage these manually or do not want them overwritten by GitHub pushes
