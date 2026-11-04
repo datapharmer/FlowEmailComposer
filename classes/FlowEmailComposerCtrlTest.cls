@@ -122,7 +122,7 @@ public class FlowEmailComposerCtrlTest {
         System.assertNotEquals(null, result);
     }
 
-    /* --- sendAnEmailMsg Tests --- */
+    /* --- sendAnEmailMsg Outbound Send Tests --- */
 
     @isTest
     static void testSendEmail_WithActivityLogging() {
@@ -144,7 +144,8 @@ public class FlowEmailComposerCtrlTest {
             'Sender Name',
             new List<String>{cv.ContentDocumentId},
             null,
-            true // createActivity = true
+            true, // createActivity = true
+            false // saveAsDraft = false
         );
         Test.stopTest();
 
@@ -178,7 +179,8 @@ public class FlowEmailComposerCtrlTest {
             null,
             null,
             null,
-            false // createActivity = false
+            false, // createActivity = false
+            false  // saveAsDraft = false
         );
         Test.stopTest();
 
@@ -214,7 +216,8 @@ public class FlowEmailComposerCtrlTest {
             null,
             null,
             new List<String>{att.Id},
-            true
+            true, // createActivity = true
+            false // saveAsDraft = false
         );
         Test.stopTest();
 
@@ -226,19 +229,14 @@ public class FlowEmailComposerCtrlTest {
         Test.startTest();
         try {
             // Trigger exception by passing empty required fields
-            FlowEmailComposerCtrl.sendAnEmailMsg(null, '', null, null, null, null, null, null, null, null, null, true);
+            FlowEmailComposerCtrl.sendAnEmailMsg(null, '', null, null, null, null, null, null, null, null, null, true, false);
             System.assert(false, 'Should have thrown an exception');
         } catch (AuraHandledException e) {
-            // Some orgs/tests might return the message differently, check for the core text
             System.assert(e.getMessage().contains('To Address is required') || e.getMessage().contains('Script-thrown exception'), 'Exception message should be handled');
         }
         Test.stopTest();
     }
 
-    /**
-     * Test case using seeAllData=true in a separate class is usually better,
-     * but here we just test that the controller handles missing OrgWideEmailAddress gracefully.
-     */
     @isTest
     static void testSendEmail_InvalidFromAddress() {
         Test.startTest();
@@ -259,10 +257,92 @@ public class FlowEmailComposerCtrlTest {
             null,
             null,
             null,
-            true
+            true, // createActivity = true
+            false // saveAsDraft = false
         );
         Test.stopTest();
 
         System.assertEquals(1, [SELECT count() FROM EmailMessage WHERE Subject = 'OWEA Test']);
+    }
+
+    /* --- Save as Draft Tests --- */
+
+    @isTest
+    static void testSaveEmailDraft_Basic() {
+        Test.startTest();
+        createTestData();
+        Account acc = [SELECT Id FROM Account LIMIT 1];
+        Contact con = [SELECT Id FROM Contact LIMIT 1];
+        ContentVersion cv = [SELECT ContentDocumentId FROM ContentVersion LIMIT 1];
+
+        FlowEmailComposerCtrl.sendAnEmailMsg(
+            'sender@example.com',
+            'draft-to@example.com',
+            'draft-cc@example.com',
+            'draft-bcc@example.com',
+            'Draft Save Subject',
+            con.Id,
+            acc.Id,
+            '<p>Draft Body Content</p>',
+            'Sender Name',
+            new List<String>{cv.ContentDocumentId},
+            null,
+            false, // createActivity
+            true  // saveAsDraft = true
+        );
+        Test.stopTest();
+
+        // Verify EmailMessage was saved as Draft (Status 5)
+        List<EmailMessage> drafts = [
+            SELECT Id, Status, Subject, HtmlBody, ToAddress, CcAddress, BccAddress, RelatedToId 
+            FROM EmailMessage 
+            WHERE Subject = 'Draft Save Subject'
+        ];
+        
+        System.assertEquals(1, drafts.size(), 'Draft record should be created');
+        System.assertEquals('5', drafts[0].Status, 'Email status must be 5 (Draft)');
+        System.assertEquals('draft-to@example.com', drafts[0].ToAddress);
+        System.assertEquals(acc.Id, drafts[0].RelatedToId, 'Account should link to RelatedToId');
+
+        // Verify ContentDocumentLink creation for draft attachment
+        List<ContentDocumentLink> cdls = [
+            SELECT Id FROM ContentDocumentLink 
+            WHERE LinkedEntityId = :drafts[0].Id AND ContentDocumentId = :cv.ContentDocumentId
+        ];
+        System.assertEquals(1, cdls.size(), 'Uploaded file should be linked to the draft EmailMessage');
+    }
+
+    @isTest
+    static void testSaveEmailDraft_WithCase() {
+        Test.startTest();
+        Case c = new Case(Subject = 'Test Draft Case');
+        insert c;
+
+        FlowEmailComposerCtrl.sendAnEmailMsg(
+            'sender@example.com',
+            'case-draft@example.com',
+            null,
+            null,
+            'Case Draft Subject',
+            null,
+            c.Id,
+            '<p>Case Draft Body</p>',
+            null,
+            null,
+            null,
+            false, // createActivity
+            true  // saveAsDraft = true
+        );
+        Test.stopTest();
+
+        EmailMessage draft = [
+            SELECT Id, Status, ParentId, RelatedToId 
+            FROM EmailMessage 
+            WHERE Subject = 'Case Draft Subject' 
+            LIMIT 1
+        ];
+
+        System.assertEquals('5', draft.Status, 'Status should be 5 (Draft)');
+        System.assertEquals(c.Id, draft.ParentId, 'Case ID must map to ParentId instead of RelatedToId');
     }
 }
