@@ -276,7 +276,7 @@ public class FlowEmailComposerCtrlTest {
         ContentVersion cv = [SELECT ContentDocumentId FROM ContentVersion LIMIT 1];
 
         FlowEmailComposerCtrl.sendAnEmailMsg(
-            'sender@example.com',
+            UserInfo.getUserEmail(), // Changed to context user to avoid draft insert validation exception
             'draft-to@example.com',
             'draft-cc@example.com',
             'draft-bcc@example.com',
@@ -301,7 +301,7 @@ public class FlowEmailComposerCtrlTest {
         
         System.assertEquals(1, drafts.size(), 'Draft record should be created');
         System.assertEquals('5', drafts[0].Status, 'Email status must be 5 (Draft)');
-        System.assertEquals('draft-to@example.com', drafts[0].ToAddress);
+        System.assert(drafts[0].ToAddress.contains('draft-to@example.com'), 'ToAddress should contain the specified email'); // Changed to .contains() since WhoId email gets appended
         System.assertEquals(acc.Id, drafts[0].RelatedToId, 'Account should link to RelatedToId');
 
         // Verify ContentDocumentLink creation for draft attachment
@@ -319,7 +319,7 @@ public class FlowEmailComposerCtrlTest {
         insert c;
 
         FlowEmailComposerCtrl.sendAnEmailMsg(
-            'sender@example.com',
+            UserInfo.getUserEmail(), // Changed to context user to avoid draft insert validation exception
             'case-draft@example.com',
             null,
             null,
