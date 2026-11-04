@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
-    <apiVersion>63.0</apiVersion>
+    <apiVersion>68.0</apiVersion>
     <isExposed>true</isExposed>
     <targets>
         <target>lightning__FlowScreen</target>
@@ -46,6 +46,7 @@
             <property name="folderHelpText" label="Folder Picker Help Text" type="String" description="Tooltip text for the folder picker."/>
             <property name="templateLabel" label="Template Picker Label" type="String" description="Custom label for the template picker. Defaults to 'Select a Template:'."/>
             <property name="templateHelpText" label="Template Picker Help Text" type="String" description="Tooltip text for the template picker."/>
+            <property name="saveAsDraft" label="Save as Draft" type="Boolean" description="If checked, the composer action saves the email as a draft in Salesforce instead of sending it."/>
         </targetConfig>
     </targetConfigs>
 </LightningComponentBundle>
