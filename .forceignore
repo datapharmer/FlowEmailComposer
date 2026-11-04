@@ -1,5 +1,7 @@
 # --- Default Scratch Org Configurations ---
 config/
+CHANGELOG.md
+README.md
 *.md
 
 # --- Profiles & Permission Sets ---
